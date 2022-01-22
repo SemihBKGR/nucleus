@@ -5,16 +5,7 @@ import (
 	"errors"
 )
 
-type lru interface {
-	add(key, value interface{})
-	get(key interface{}, moveFront bool) (value interface{}, ok bool)
-	remove() (key, value interface{}, ok bool)
-	contains(key interface{}) (ok bool)
-	len() int
-	cap() int
-}
-
-type lruCache struct {
+type lru struct {
 	capacity   int
 	elementMap map[interface{}]*list.Element
 	useList    *list.List
@@ -25,11 +16,11 @@ type entry struct {
 	value interface{}
 }
 
-func newLruCache(capacity int) (*lruCache, error) {
+func newLruCache(capacity int) (*lru, error) {
 	if capacity <= 0 {
 		return nil, errors.New("capacity must be positive value")
 	}
-	lru := &lruCache{
+	lru := &lru{
 		capacity:   capacity,
 		elementMap: make(map[interface{}]*list.Element),
 		useList:    list.New(),
@@ -37,52 +28,76 @@ func newLruCache(capacity int) (*lruCache, error) {
 	return lru, nil
 }
 
-func (lru *lruCache) add(key, value interface{}) {
-	if len(lru.elementMap) >= lru.capacity {
-		lru.remove()
+func (l *lru) add(key, value interface{}) {
+	if len(l.elementMap) >= l.capacity {
+		l.remove()
 	}
-	if element, ok := lru.elementMap[key]; ok {
-		lru.useList.MoveToFront(element)
+	if element, ok := l.elementMap[key]; ok {
+		l.useList.MoveToFront(element)
 		element.Value.(*entry).value = value
 	}
 	entry := &entry{
 		key:   key,
 		value: value,
 	}
-	element := lru.useList.PushFront(entry)
-	lru.elementMap[key] = element
+	element := l.useList.PushFront(entry)
+	l.elementMap[key] = element
 }
 
-func (lru *lruCache) get(key interface{}, moveFront bool) (value interface{}, ok bool) {
-	if element, ok := lru.elementMap[key]; ok {
+func (l *lru) get(key interface{}, moveFront bool) (value interface{}, ok bool) {
+	if element, ok := l.elementMap[key]; ok {
 		if moveFront {
-			lru.useList.MoveToFront(element)
+			l.useList.MoveToFront(element)
 		}
 		return element.Value.(*entry).value, true
 	}
 	return nil, false
 }
 
-func (lru *lruCache) contains(key interface{}) (ok bool) {
-	_, ok = lru.elementMap[key]
+func (l *lru) contains(key interface{}) (ok bool) {
+	_, ok = l.elementMap[key]
 	return
 }
 
-func (lru *lruCache) len() int {
-	return lru.useList.Len()
+func (l *lru) len() int {
+	return l.useList.Len()
 }
 
-func (lru *lruCache) cap() int {
-	return lru.capacity
+func (l *lru) cap() int {
+	return l.capacity
 }
 
-func (lru *lruCache) remove() (key, value interface{}, ok bool) {
-	element := lru.useList.Back()
+func (l *lru) remove() (key, value interface{}, ok bool) {
+	element := l.useList.Back()
 	if element != nil {
 		entry := element.Value.(*entry)
-		lru.useList.Remove(element)
-		delete(lru.elementMap, entry.key)
+		l.useList.Remove(element)
+		delete(l.elementMap, entry.key)
 		return entry.key, entry.value, true
 	}
 	return nil, nil, false
+}
+
+func (l *lru) reCap(newCapacity int) error {
+	if newCapacity <= 0 {
+		return errors.New("capacity must be positive value")
+	}
+	if l.capacity < newCapacity {
+		diff := newCapacity - l.capacity
+		for i := 0; i < diff; i++ {
+			l.remove()
+		}
+
+	}
+	l.capacity = newCapacity
+	return nil
+}
+
+func (l *lru) purge() int {
+	length := l.len()
+	for key := range l.elementMap {
+		delete(l.elementMap, key)
+	}
+	l.useList.Init()
+	return length
 }
