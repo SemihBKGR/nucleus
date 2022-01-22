@@ -4,13 +4,17 @@ import "sync"
 
 type Cache interface {
 	Add(key, value interface{})
+	Set(key, value interface{}) (ok bool)
 	Get(key interface{}) (value interface{}, ok bool)
 	Peek(key interface{}) (value interface{}, ok bool)
+	Remove(key interface{}) (ok bool)
 	Contains(key interface{}) (ok bool)
 	Len() int
 	Cap() int
 	Clear() int
 	ReCap(int) error
+	Keys() []interface{}
+	Values() []interface{}
 }
 
 type LruCache struct {
@@ -19,7 +23,7 @@ type LruCache struct {
 }
 
 func NewLruCache(cap int) (*LruCache, error) {
-	lru, err := newLruCache(cap)
+	lru, err := newLru(cap)
 	if err != nil {
 		return nil, err
 	}
@@ -35,6 +39,15 @@ func (c *LruCache) Add(key, value interface{}) {
 	c.lock.Unlock()
 }
 
+func (c *LruCache) Set(key, value interface{}) (ok bool) {
+	ok = c.Contains(key)
+	if ok {
+		c.Add(key, value)
+	}
+	return
+
+}
+
 func (c *LruCache) Get(key interface{}) (value interface{}, ok bool) {
 	c.lock.Lock()
 	value, ok = c.lru.get(key, true)
@@ -47,6 +60,13 @@ func (c *LruCache) Peek(key interface{}) (value interface{}, ok bool) {
 	value, ok = c.lru.get(key, false)
 	c.lock.RUnlock()
 	return value, ok
+}
+
+func (c *LruCache) Remove(key interface{}) (ok bool) {
+	c.lock.RLock()
+	ok = c.lru.remove(key)
+	c.lock.RUnlock()
+	return
 }
 
 func (c *LruCache) Contains(key interface{}) (ok bool) {
@@ -79,4 +99,18 @@ func (c *LruCache) ReCap(newCap int) (err error) {
 	err = c.lru.reCap(newCap)
 	c.lock.Unlock()
 	return
+}
+
+func (c *LruCache) Keys() []interface{} {
+	c.lock.RLock()
+	keys := c.lru.keys()
+	c.lock.RUnlock()
+	return keys
+}
+
+func (c *LruCache) Values() []interface{} {
+	c.lock.RLock()
+	values := c.lru.values()
+	c.lock.RUnlock()
+	return values
 }

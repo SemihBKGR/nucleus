@@ -16,7 +16,7 @@ type entry struct {
 	value interface{}
 }
 
-func newLruCache(capacity int) (*lru, error) {
+func newLru(capacity int) (*lru, error) {
 	if capacity <= 0 {
 		return nil, errors.New("capacity must be positive value")
 	}
@@ -30,7 +30,7 @@ func newLruCache(capacity int) (*lru, error) {
 
 func (l *lru) add(key, value interface{}) {
 	if len(l.elementMap) >= l.capacity {
-		l.remove()
+		l.removeLast()
 	}
 	if element, ok := l.elementMap[key]; ok {
 		l.useList.MoveToFront(element)
@@ -44,9 +44,9 @@ func (l *lru) add(key, value interface{}) {
 	l.elementMap[key] = element
 }
 
-func (l *lru) get(key interface{}, moveFront bool) (value interface{}, ok bool) {
+func (l *lru) get(key interface{}, move bool) (value interface{}, ok bool) {
 	if element, ok := l.elementMap[key]; ok {
-		if moveFront {
+		if move {
 			l.useList.MoveToFront(element)
 		}
 		return element.Value.(*entry).value, true
@@ -67,15 +67,22 @@ func (l *lru) cap() int {
 	return l.capacity
 }
 
-func (l *lru) remove() (key, value interface{}, ok bool) {
+func (l *lru) remove(key interface{}) bool {
+	element, ok := l.elementMap[key]
+	if !ok {
+		return false
+	}
+	delete(l.elementMap, key)
+	l.useList.Remove(element)
+	return true
+}
+
+func (l *lru) removeLast() bool {
 	element := l.useList.Back()
 	if element != nil {
-		entry := element.Value.(*entry)
-		l.useList.Remove(element)
-		delete(l.elementMap, entry.key)
-		return entry.key, entry.value, true
+		return l.remove(element.Value.(*entry).key)
 	}
-	return nil, nil, false
+	return false
 }
 
 func (l *lru) reCap(newCapacity int) error {
@@ -85,9 +92,8 @@ func (l *lru) reCap(newCapacity int) error {
 	if l.capacity < newCapacity {
 		diff := newCapacity - l.capacity
 		for i := 0; i < diff; i++ {
-			l.remove()
+			l.removeLast()
 		}
-
 	}
 	l.capacity = newCapacity
 	return nil
@@ -100,4 +106,20 @@ func (l *lru) purge() int {
 	}
 	l.useList.Init()
 	return length
+}
+
+func (l *lru) keys() []interface{} {
+	keys := make([]interface{}, 0, len(l.elementMap))
+	for k := range l.elementMap {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
+func (l *lru) values() []interface{} {
+	values := make([]interface{}, 0, len(l.elementMap))
+	for _, v := range l.elementMap {
+		values = append(values, v.Value.(*entry).value)
+	}
+	return values
 }
