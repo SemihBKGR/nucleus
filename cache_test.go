@@ -170,7 +170,7 @@ func TestLruCache_SetCap(t *testing.T) {
 		t.FailNow()
 	}
 	newCapacity = -1
-	err = cache.SetCap(newCapacity)
+	err = cache.policy.SetCap(newCapacity)
 	if err == nil {
 		t.FailNow()
 	}

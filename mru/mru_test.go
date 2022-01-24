@@ -1,4 +1,4 @@
-package lru
+package mru
 
 import (
 	"math"
@@ -6,23 +6,23 @@ import (
 	"testing"
 )
 
-func TestNewLru(t *testing.T) {
-	lru, err := NewLru(1)
-	if lru == nil {
+func TestNewMru(t *testing.T) {
+	mru, err := NewMru(1)
+	if mru == nil {
 		t.FailNow()
 	}
 	if err != nil {
 		t.FailNow()
 	}
-	lru, err = NewLru(0)
-	if lru != nil {
+	mru, err = NewMru(0)
+	if mru != nil {
 		t.FailNow()
 	}
 	if err == nil {
 		t.FailNow()
 	}
-	lru, err = NewLru(-1)
-	if lru != nil {
+	mru, err = NewMru(-1)
+	if mru != nil {
 		t.FailNow()
 	}
 	if err == nil {
@@ -30,173 +30,173 @@ func TestNewLru(t *testing.T) {
 	}
 }
 
-func TestLru_Add(t *testing.T) {
+func TestMru_Add(t *testing.T) {
 	capacity := 10
-	lru, _ := NewLru(capacity)
+	mru, _ := NewMru(capacity)
 	for i := 0; i < capacity*2; i++ {
-		lru.Add(i, strconv.Itoa(i))
+		mru.Add(i, strconv.Itoa(i))
 	}
 }
 
-func TestLru_Add2(t *testing.T) {
+func TestMru_Add2(t *testing.T) {
 	capacity := 3
-	lru, _ := NewLru(capacity)
+	mru, _ := NewMru(capacity)
 	// 1 -> []
-	lru.Add(1, nil)
+	mru.Add(1, nil)
 	// [1]
-	if !contains(lru.Keys(), 1) {
+	if !contains(mru.Keys(), 1) {
 		t.FailNow()
 	}
 	// 2 -> [1]
-	lru.Add(2, nil)
+	mru.Add(2, nil)
 	// [1,2]
-	if !containsAll(lru.Keys(), 1, 2) {
+	if !containsAll(mru.Keys(), 1, 2) {
 		t.FailNow()
 	}
 	// 3 -> [1,2]
-	lru.Add(3, nil)
+	mru.Add(3, nil)
 	// [1,2,3]
-	if !containsAll(lru.Keys(), 1, 2, 3) {
+	if !containsAll(mru.Keys(), 1, 2, 3) {
 		t.FailNow()
 	}
 	// 4 -> [1,2,3]
-	lru.Add(4, nil)
-	// [2,3,4]
-	if !containsAll(lru.Keys(), 2, 3, 4) {
+	mru.Add(4, nil)
+	// [1,2,4]
+	if !containsAll(mru.Keys(), 1, 2, 4) {
 		t.FailNow()
 	}
-	// 2 -> [2,3,4]
-	lru.Add(2, nil)
-	// [3,4,2]
-	if !containsAll(lru.Keys(), 2, 3, 4) {
+	// 2 -> [1,2,4]
+	mru.Add(2, nil)
+	// [1,4,2]
+	if !containsAll(mru.Keys(), 1, 2, 4) {
 		t.FailNow()
 	}
-	// 5 -> [3,4,2]
-	lru.Add(5, nil)
-	// [4,2,5]
-	if !containsAll(lru.Keys(), 2, 4, 5) {
+	// 5 -> [1,4,2]
+	mru.Add(5, nil)
+	// [1,4,5]
+	if !containsAll(mru.Keys(), 1, 4, 5) {
 		t.FailNow()
 	}
 }
 
-func TestLru_Get(t *testing.T) {
+func TestMru_Get(t *testing.T) {
 	capacity := 10
-	lru, _ := NewLru(capacity)
+	mru, _ := NewMru(capacity)
 	for i := 0; i < capacity; i++ {
-		lru.Add(i, strconv.Itoa(i))
+		mru.Add(i, strconv.Itoa(i))
 	}
 	for i := 0; i < capacity; i++ {
-		value, ok := lru.Get(i, true)
+		value, ok := mru.Get(i, true)
 		if !ok || value.(string) != strconv.Itoa(i) {
 			t.FailNow()
 		}
 	}
 	for i := capacity; i < capacity*2; i++ {
-		value, ok := lru.Get(i, true)
+		value, ok := mru.Get(i, true)
 		if ok || value != nil {
 			t.FailNow()
 		}
 	}
 }
 
-func TestLru_Remove(t *testing.T) {
+func TestMru_Remove(t *testing.T) {
 	capacity := 10
-	lru, _ := NewLru(capacity)
+	mru, _ := NewMru(capacity)
 	for i := 0; i < capacity; i++ {
-		lru.Add(i, strconv.Itoa(i))
+		mru.Add(i, strconv.Itoa(i))
 	}
 	for i := 0; i < capacity; i++ {
-		ok := lru.Remove(i)
+		ok := mru.Remove(i)
 		if !ok {
 			t.FailNow()
 		}
 	}
 	for i := 0; i < capacity; i++ {
-		ok := lru.Remove(i)
+		ok := mru.Remove(i)
 		if ok {
 			t.FailNow()
 		}
 	}
 }
 
-func TestLru_Clear(t *testing.T) {
+func TestMru_Clear(t *testing.T) {
 	capacity := 10
-	lru, _ := NewLru(capacity)
+	mru, _ := NewMru(capacity)
 	for i := 0; i < capacity; i++ {
-		lru.Add(i, strconv.Itoa(i))
+		mru.Add(i, strconv.Itoa(i))
 	}
-	lru.Clear()
-	if lru.Len() != 0 {
+	mru.Clear()
+	if mru.Len() != 0 {
 		t.FailNow()
 	}
 }
 
-func TestLru_Cap(t *testing.T) {
+func TestMru_Cap(t *testing.T) {
 	capacity := 10
-	lru, _ := NewLru(capacity)
-	if lru.Cap() != capacity {
+	mru, _ := NewMru(capacity)
+	if mru.Cap() != capacity {
 		t.FailNow()
 	}
 }
 
-func TestLru_Len(t *testing.T) {
+func TestMru_Len(t *testing.T) {
 	capacity := 10
-	lru, _ := NewLru(capacity)
-	if lru.Len() != 0 {
+	mru, _ := NewMru(capacity)
+	if mru.Len() != 0 {
 		t.FailNow()
 	}
 	for i := 0; i < capacity*2; i++ {
-		lru.Add(i, strconv.Itoa(i))
-		if lru.Len() != int(math.Min(float64(i+1), float64(capacity))) {
+		mru.Add(i, strconv.Itoa(i))
+		if mru.Len() != int(math.Min(float64(i+1), float64(capacity))) {
 			t.FailNow()
 		}
 	}
 }
 
-func TestLru_SetCap(t *testing.T) {
+func TestMru_SetCap(t *testing.T) {
 	capacity := 10
 	newCapacity := 20
-	lru, _ := NewLru(capacity)
-	err := lru.SetCap(newCapacity)
+	mru, _ := NewMru(capacity)
+	err := mru.SetCap(newCapacity)
 	if err != nil {
 		t.FailNow()
 	}
-	if lru.Cap() != newCapacity {
+	if mru.Cap() != newCapacity {
 		t.FailNow()
 	}
 	newCapacity = 5
-	err = lru.SetCap(newCapacity)
+	err = mru.SetCap(newCapacity)
 	if err != nil {
 		t.FailNow()
 	}
-	if lru.Cap() != newCapacity {
+	if mru.Cap() != newCapacity {
 		t.FailNow()
 	}
 	newCapacity = -1
-	err = lru.SetCap(newCapacity)
+	err = mru.SetCap(newCapacity)
 	if err == nil {
 		t.FailNow()
 	}
-	if lru.Cap() == newCapacity {
+	if mru.Cap() == newCapacity {
 		t.FailNow()
 	}
 }
 
-func TestLru_Keys(t *testing.T) {
+func TestMru_Keys(t *testing.T) {
 	capacity := 10
-	lru, _ := NewLru(capacity)
+	mru, _ := NewMru(capacity)
 	for i := 0; i < capacity*2; i++ {
-		lru.Add(i, strconv.Itoa(i))
-		keys := lru.Keys()
+		mru.Add(i, strconv.Itoa(i))
+		keys := mru.Keys()
 		if !contains(keys, i) {
 			t.FailNow()
 		}
 	}
 }
 
-func TestLru_Values(t *testing.T) {
+func TestMru_Values(t *testing.T) {
 	capacity := 10
-	cache, _ := NewLru(capacity)
+	cache, _ := NewMru(capacity)
 	for i := 0; i < capacity*2; i++ {
 		cache.Add(i, strconv.Itoa(i))
 		values := cache.Values()
