@@ -78,26 +78,6 @@ func TestLruCache_Get(t *testing.T) {
 	}
 }
 
-func TestLruCache_Peek(t *testing.T) {
-	capacity := 10
-	cache, _ := NewLruCache(capacity)
-	for i := 0; i < capacity; i++ {
-		cache.Add(i, strconv.Itoa(i))
-	}
-	for i := 0; i < capacity; i++ {
-		value, ok := cache.Peek(i)
-		if !ok || value.(string) != strconv.Itoa(i) {
-			t.FailNow()
-		}
-	}
-	for i := capacity; i < capacity*2; i++ {
-		value, ok := cache.Peek(i)
-		if ok || value != nil {
-			t.FailNow()
-		}
-	}
-}
-
 func TestLruCache_Remove(t *testing.T) {
 	capacity := 10
 	cache, _ := NewLruCache(capacity)
@@ -170,11 +150,11 @@ func TestLruCache_Clear(t *testing.T) {
 	}
 }
 
-func TestLruCache_ReCap(t *testing.T) {
+func TestLruCache_SetCap(t *testing.T) {
 	capacity := 10
 	newCapacity := 20
 	cache, _ := NewLruCache(capacity)
-	err := cache.ReCap(newCapacity)
+	err := cache.SetCap(newCapacity)
 	if err != nil {
 		t.FailNow()
 	}
@@ -182,7 +162,7 @@ func TestLruCache_ReCap(t *testing.T) {
 		t.FailNow()
 	}
 	newCapacity = 5
-	err = cache.ReCap(newCapacity)
+	err = cache.SetCap(newCapacity)
 	if err != nil {
 		t.FailNow()
 	}
@@ -190,7 +170,7 @@ func TestLruCache_ReCap(t *testing.T) {
 		t.FailNow()
 	}
 	newCapacity = -1
-	err = cache.ReCap(newCapacity)
+	err = cache.SetCap(newCapacity)
 	if err == nil {
 		t.FailNow()
 	}

@@ -1,135 +1,123 @@
 package nucleus
 
-import "sync"
+import (
+	"github.com/SemihBKGR/nucleus/lru"
+	"sync"
+)
 
-// Cache is the base interface.
-type Cache interface {
-	Add(key, value interface{})
-	Set(key, value interface{}) (ok bool)
-	Get(key interface{}) (value interface{}, ok bool)
-	Peek(key interface{}) (value interface{}, ok bool)
+// Policy base interface of policies.
+type Policy interface {
+	Add(key, value interface{}) (eviction bool)
+	Get(key interface{}, trigger bool) (value interface{}, ok bool)
 	Remove(key interface{}) (ok bool)
-	Contains(key interface{}) (ok bool)
+	Clear() int
 	Len() int
 	Cap() int
-	Clear() int
-	ReCap(int) error
+	SetCap(int) error
 	Keys() []interface{}
 	Values() []interface{}
 }
 
-// LruCache is Cache implementation using LRU algorithm.
-type LruCache struct {
-	lru  *lru
-	lock sync.RWMutex
+// Cache is main struct.
+type Cache struct {
+	policy Policy
+	lock   sync.RWMutex
 }
 
-// NewLruCache creates new LruCache.
-// *LruCache and error are returned.
-// Cap must be positive value.
-func NewLruCache(cap int) (*LruCache, error) {
-	lru, err := newLru(cap)
+// NewLruCache returns new cache with lru policy.
+func NewLruCache(cap int) (*Cache, error) {
+	lruPolicy, err := lru.NewLru(cap)
 	if err != nil {
 		return nil, err
 	}
-	cache := &LruCache{
-		lru: lru,
+	cache := &Cache{
+		policy: lruPolicy,
 	}
 	return cache, nil
 }
 
-// Add caches key and value.
-func (c *LruCache) Add(key, value interface{}) {
+// Add adds entry in cache
+func (c *Cache) Add(key, value interface{}) (eviction bool) {
 	c.lock.Lock()
-	c.lru.add(key, value)
-	c.lock.Unlock()
+	defer c.lock.Unlock()
+	return c.policy.Add(key, value)
 }
 
 // Set updates cache entry.
 // Returns true if value updated.
-func (c *LruCache) Set(key, value interface{}) (ok bool) {
-	ok = c.Contains(key)
+func (c *Cache) Set(key, value interface{}) (ok bool) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	_, ok = c.policy.Get(key, false)
 	if ok {
-		c.Add(key, value)
+		c.policy.Add(key, value)
 	}
 	return
-
 }
 
 // Get returns value of cached entry.
-func (c *LruCache) Get(key interface{}) (value interface{}, ok bool) {
+func (c *Cache) Get(key interface{}) (value interface{}, ok bool) {
 	c.lock.Lock()
-	value, ok = c.lru.get(key, true)
-	c.lock.Unlock()
-	return value, ok
-}
-
-// Peek return value of cache entry without.
-func (c *LruCache) Peek(key interface{}) (value interface{}, ok bool) {
-	c.lock.RLock()
-	value, ok = c.lru.get(key, false)
-	c.lock.RUnlock()
-	return value, ok
+	defer c.lock.Unlock()
+	value, ok = c.policy.Get(key, true)
+	return
 }
 
 // Remove removes cache entry.
-func (c *LruCache) Remove(key interface{}) (ok bool) {
-	c.lock.RLock()
-	ok = c.lru.remove(key)
-	c.lock.RUnlock()
+func (c *Cache) Remove(key interface{}) (ok bool) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	ok = c.policy.Remove(key)
 	return
 }
 
 // Contains returns true if there is a cache entry given given key.
-func (c *LruCache) Contains(key interface{}) (ok bool) {
+func (c *Cache) Contains(key interface{}) (ok bool) {
 	c.lock.RLock()
-	containKey := c.lru.contains(key)
-	c.lock.RUnlock()
-	return containKey
-}
-
-// Len returns length of the cache.
-func (c *LruCache) Len() int {
-	c.lock.RLock()
-	length := c.lru.len()
-	c.lock.RUnlock()
-	return length
-}
-
-// Cap returns capacity of the cache.
-func (c *LruCache) Cap() int {
-	return c.lru.cap()
-}
-
-// Clear removes all entries in the cache.
-func (c *LruCache) Clear() int {
-	c.lock.Lock()
-	length := c.lru.purge()
-	c.lock.Unlock()
-	return length
-}
-
-// ReCap set capacity of the cache.
-// Returns error unless newCap is negative value.
-func (c *LruCache) ReCap(newCap int) (err error) {
-	c.lock.Lock()
-	err = c.lru.reCap(newCap)
-	c.lock.Unlock()
+	defer c.lock.RUnlock()
+	_, ok = c.policy.Get(key, false)
 	return
 }
 
-// Keys returns a slice of entry keys in the cache.
-func (c *LruCache) Keys() []interface{} {
+// Clear removes all entries in the cache.
+func (c *Cache) Clear() (length int) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	length = c.policy.Clear()
+	return
+}
+
+// Len returns length of the cache.
+func (c *Cache) Len() (len int) {
 	c.lock.RLock()
-	keys := c.lru.keys()
-	c.lock.RUnlock()
-	return keys
+	defer c.lock.RUnlock()
+	len = c.policy.Len()
+	return
+}
+
+// Cap returns capacity of the cache.
+func (c *Cache) Cap() int {
+	return c.policy.Cap()
+}
+
+// SetCap set capacity of the cache.
+// Returns error unless newCap is negative value.
+func (c *Cache) SetCap(newCap int) error {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	return c.policy.SetCap(newCap)
+}
+
+// Keys returns a slice of entry keys in the cache.
+func (c *Cache) Keys() []interface{} {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+	return c.policy.Keys()
 }
 
 // Values returns a slice of entry values in the cache.
-func (c *LruCache) Values() []interface{} {
+func (c *Cache) Values() []interface{} {
 	c.lock.RLock()
-	values := c.lru.values()
-	c.lock.RUnlock()
-	return values
+	defer c.lock.RUnlock()
+	return c.policy.Values()
 }
