@@ -2,6 +2,7 @@ package nucleus
 
 import (
 	"github.com/SemihBKGR/nucleus/lru"
+	"github.com/SemihBKGR/nucleus/mru"
 	"sync"
 )
 
@@ -32,6 +33,18 @@ func NewLruCache(cap int) (*Cache, error) {
 	}
 	cache := &Cache{
 		policy: lruPolicy,
+	}
+	return cache, nil
+}
+
+// NewMruCache returns new cache with mru policy.
+func NewMruCache(cap int) (*Cache, error) {
+	mruPolicy, err := mru.NewMru(cap)
+	if err != nil {
+		return nil, err
+	}
+	cache := &Cache{
+		policy: mruPolicy,
 	}
 	return cache, nil
 }

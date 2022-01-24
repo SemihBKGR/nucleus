@@ -5,6 +5,7 @@ import (
 	"errors"
 )
 
+// Mru Most recently used policy
 type Mru struct {
 	capacity     int
 	elementMap   map[interface{}]*list.Element
