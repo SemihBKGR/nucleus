@@ -196,10 +196,10 @@ func TestMru_Keys(t *testing.T) {
 
 func TestMru_Values(t *testing.T) {
 	capacity := 10
-	cache, _ := NewMru(capacity)
+	mru, _ := NewMru(capacity)
 	for i := 0; i < capacity*2; i++ {
-		cache.Add(i, strconv.Itoa(i))
-		values := cache.Values()
+		mru.Add(i, strconv.Itoa(i))
+		values := mru.Values()
 		if !contains(values, strconv.Itoa(i)) {
 			t.FailNow()
 		}

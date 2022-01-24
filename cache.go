@@ -1,6 +1,7 @@
 package nucleus
 
 import (
+	"github.com/SemihBKGR/nucleus/fifo"
 	"github.com/SemihBKGR/nucleus/lru"
 	"github.com/SemihBKGR/nucleus/mru"
 	"sync"
@@ -45,6 +46,18 @@ func NewMruCache(cap int) (*Cache, error) {
 	}
 	cache := &Cache{
 		policy: mruPolicy,
+	}
+	return cache, nil
+}
+
+// NewFifoCache returns new cache with fifo policy.
+func NewFifoCache(cap int) (*Cache, error) {
+	fifoPolicy, err := fifo.NewFifo(cap)
+	if err != nil {
+		return nil, err
+	}
+	cache := &Cache{
+		policy: fifoPolicy,
 	}
 	return cache, nil
 }

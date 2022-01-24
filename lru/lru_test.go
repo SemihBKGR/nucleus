@@ -196,10 +196,10 @@ func TestLru_Keys(t *testing.T) {
 
 func TestLru_Values(t *testing.T) {
 	capacity := 10
-	cache, _ := NewLru(capacity)
+	lru, _ := NewLru(capacity)
 	for i := 0; i < capacity*2; i++ {
-		cache.Add(i, strconv.Itoa(i))
-		values := cache.Values()
+		lru.Add(i, strconv.Itoa(i))
+		values := lru.Values()
 		if !contains(values, strconv.Itoa(i)) {
 			t.FailNow()
 		}
