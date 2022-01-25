@@ -12,7 +12,7 @@ type Tlru struct {
 	capacity           int
 	elementMap         map[interface{}]*list.Element
 	evictionList       *list.List
-	evictionExpiration time.Duration
+	expirationDuration time.Duration
 	daemonStarted      bool
 }
 
@@ -31,28 +31,31 @@ func NewTlru(capacity int, expiration time.Duration) (*Tlru, error) {
 		capacity:           capacity,
 		elementMap:         make(map[interface{}]*list.Element),
 		evictionList:       list.New(),
-		evictionExpiration: expiration,
+		expirationDuration: expiration,
 		daemonStarted:      false,
 	}
 	return tlru, nil
 }
 
-// StartEvictionDaemon starts time expiration daemon
-func (t *Tlru) StartEvictionDaemon(lock *sync.RWMutex) {
+// StartDaemon starts time expiration daemon
+func (t *Tlru) StartDaemon(lock *sync.RWMutex) (ok bool) {
 	if t.daemonStarted {
-		return
+		return false
+	}
+	if t.expirationDuration <= 0 {
+		return false
 	}
 	t.daemonStarted = true
 	go func() {
 		for {
-			time.Sleep(t.evictionExpiration)
+			time.Sleep(t.expirationDuration)
 			expiredKeys := make([]interface{}, 0)
 			lock.RLock()
 			currentTimeMs := time.Now().UnixMilli()
 			element := t.evictionList.Back()
 			for element != nil {
 				entry := element.Value.(*entry)
-				if entry.timeMs+t.evictionExpiration.Milliseconds() <= currentTimeMs {
+				if entry.timeMs+t.expirationDuration.Milliseconds() <= currentTimeMs {
 					expiredKeys = append(expiredKeys, entry.key)
 				}
 				element = element.Prev()
@@ -65,6 +68,7 @@ func (t *Tlru) StartEvictionDaemon(lock *sync.RWMutex) {
 			lock.Unlock()
 		}
 	}()
+	return true
 }
 
 // Add adds entry in cache
@@ -170,4 +174,14 @@ func (t *Tlru) Values() []interface{} {
 		values = append(values, v.Value.(*entry).value)
 	}
 	return values
+}
+
+// DaemonStarted returns true if expiration eviction daemon started
+func (t *Tlru) DaemonStarted() bool {
+	return t.daemonStarted
+}
+
+// ExpirationDuration returns duration of expiration
+func (t *Tlru) ExpirationDuration() time.Duration {
+	return t.expirationDuration
 }

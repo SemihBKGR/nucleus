@@ -30,7 +30,79 @@ func TestNewLruCache(t *testing.T) {
 	}
 }
 
-func TestLruCache_Add(t *testing.T) {
+func TestNewMruCache(t *testing.T) {
+	cache, err := NewMruCache(1)
+	if cache == nil {
+		t.FailNow()
+	}
+	if err != nil {
+		t.FailNow()
+	}
+	cache, err = NewMruCache(0)
+	if cache != nil {
+		t.FailNow()
+	}
+	if err == nil {
+		t.FailNow()
+	}
+	cache, err = NewMruCache(-1)
+	if cache != nil {
+		t.FailNow()
+	}
+	if err == nil {
+		t.FailNow()
+	}
+}
+
+func TestNewFifoCache(t *testing.T) {
+	cache, err := NewFifoCache(1)
+	if cache == nil {
+		t.FailNow()
+	}
+	if err != nil {
+		t.FailNow()
+	}
+	cache, err = NewFifoCache(0)
+	if cache != nil {
+		t.FailNow()
+	}
+	if err == nil {
+		t.FailNow()
+	}
+	cache, err = NewFifoCache(-1)
+	if cache != nil {
+		t.FailNow()
+	}
+	if err == nil {
+		t.FailNow()
+	}
+}
+
+func TestNewTlruCache(t *testing.T) {
+	cache, err := NewTlruCache(1, 0)
+	if cache == nil {
+		t.FailNow()
+	}
+	if err != nil {
+		t.FailNow()
+	}
+	cache, err = NewTlruCache(0, 0)
+	if cache != nil {
+		t.FailNow()
+	}
+	if err == nil {
+		t.FailNow()
+	}
+	cache, err = NewTlruCache(-1, 0)
+	if cache != nil {
+		t.FailNow()
+	}
+	if err == nil {
+		t.FailNow()
+	}
+}
+
+func TestCache_Add(t *testing.T) {
 	capacity := 10
 	cache, _ := NewLruCache(capacity)
 	for i := 0; i < capacity*2; i++ {
@@ -38,7 +110,7 @@ func TestLruCache_Add(t *testing.T) {
 	}
 }
 
-func TestLruCache_Set(t *testing.T) {
+func TestCache_Set(t *testing.T) {
 	capacity := 10
 	cache, _ := NewLruCache(capacity)
 	for i := 0; i < capacity; i++ {
@@ -58,7 +130,7 @@ func TestLruCache_Set(t *testing.T) {
 	}
 }
 
-func TestLruCache_Get(t *testing.T) {
+func TestCache_Get(t *testing.T) {
 	capacity := 10
 	cache, _ := NewLruCache(capacity)
 	for i := 0; i < capacity; i++ {
@@ -78,7 +150,7 @@ func TestLruCache_Get(t *testing.T) {
 	}
 }
 
-func TestLruCache_Remove(t *testing.T) {
+func TestCache_Remove(t *testing.T) {
 	capacity := 10
 	cache, _ := NewLruCache(capacity)
 	for i := 0; i < capacity; i++ {
@@ -98,7 +170,7 @@ func TestLruCache_Remove(t *testing.T) {
 	}
 }
 
-func TestLruCache_Contains(t *testing.T) {
+func TestCache_Contains(t *testing.T) {
 	capacity := 10
 	cache, _ := NewLruCache(capacity)
 	for i := 0; i < capacity; i++ {
@@ -116,7 +188,7 @@ func TestLruCache_Contains(t *testing.T) {
 	}
 }
 
-func TestLruCache_Cap(t *testing.T) {
+func TestCache_Cap(t *testing.T) {
 	capacity := 10
 	cache, _ := NewLruCache(capacity)
 	if cache.Cap() != capacity {
@@ -124,7 +196,7 @@ func TestLruCache_Cap(t *testing.T) {
 	}
 }
 
-func TestLruCache_Len(t *testing.T) {
+func TestCache_Len(t *testing.T) {
 	capacity := 10
 	cache, _ := NewLruCache(capacity)
 	if cache.Len() != 0 {
@@ -138,7 +210,7 @@ func TestLruCache_Len(t *testing.T) {
 	}
 }
 
-func TestLruCache_Clear(t *testing.T) {
+func TestCache_Clear(t *testing.T) {
 	capacity := 10
 	cache, _ := NewLruCache(capacity)
 	for i := 0; i < capacity; i++ {
@@ -150,7 +222,7 @@ func TestLruCache_Clear(t *testing.T) {
 	}
 }
 
-func TestLruCache_SetCap(t *testing.T) {
+func TestCache_SetCap(t *testing.T) {
 	capacity := 10
 	newCapacity := 20
 	cache, _ := NewLruCache(capacity)
@@ -179,7 +251,7 @@ func TestLruCache_SetCap(t *testing.T) {
 	}
 }
 
-func TestLruCache_Keys(t *testing.T) {
+func TestCache_Keys(t *testing.T) {
 	capacity := 10
 	cache, _ := NewLruCache(capacity)
 	for i := 0; i < capacity*2; i++ {
@@ -191,7 +263,7 @@ func TestLruCache_Keys(t *testing.T) {
 	}
 }
 
-func TestLruCache_Values(t *testing.T) {
+func TestCache_Values(t *testing.T) {
 	capacity := 10
 	cache, _ := NewLruCache(capacity)
 	for i := 0; i < capacity*2; i++ {

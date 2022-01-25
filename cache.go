@@ -73,7 +73,7 @@ func NewTlruCache(cap int, expDur time.Duration) (*Cache, error) {
 	cache := &Cache{
 		policy: tlruPolicy,
 	}
-	tlruPolicy.StartEvictionDaemon(&cache.lock)
+	tlruPolicy.StartDaemon(&cache.lock)
 	return cache, nil
 }
 
