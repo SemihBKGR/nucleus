@@ -4,7 +4,9 @@ import (
 	"github.com/SemihBKGR/nucleus/fifo"
 	"github.com/SemihBKGR/nucleus/lru"
 	"github.com/SemihBKGR/nucleus/mru"
+	"github.com/SemihBKGR/nucleus/tlru"
 	"sync"
+	"time"
 )
 
 // Policy base interface of policies.
@@ -59,6 +61,19 @@ func NewFifoCache(cap int) (*Cache, error) {
 	cache := &Cache{
 		policy: fifoPolicy,
 	}
+	return cache, nil
+}
+
+// NewTlruCache create new cache with tlru policy
+func NewTlruCache(cap int, expDur time.Duration) (*Cache, error) {
+	tlruPolicy, err := tlru.NewTlru(cap, expDur)
+	if err != nil {
+		return nil, err
+	}
+	cache := &Cache{
+		policy: tlruPolicy,
+	}
+	tlruPolicy.StartEvictionDaemon(&cache.lock)
 	return cache, nil
 }
 
